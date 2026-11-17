@@ -1,0 +1,30 @@
+services:
+  bank2ha:
+    build:
+      context: ../bank2ha
+      dockerfile: ../standalone/Dockerfile
+    container_name: bank2ha
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      EB_PRIVATE_KEY_PATH: /run/secrets/eb_private_key
+    ports:
+      # Default: only reachable from this machine. Set BIND_ADDR=0.0.0.0 in .env
+      # (and UI_PASSWORD!) if you need the UI from other machines on your LAN.
+      - "${BIND_ADDR:-127.0.0.1}:8080:8080"
+    volumes:
+      - ./data:/data                 # SQLite database (chmod 700 on host)
+      - ./config:/config:ro          # rules.yaml
+    secrets:
+      - eb_private_key
+    user: "1000:1000"
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+
+secrets:
+  eb_private_key:
+    file: ./secrets/eb_private_key.pem

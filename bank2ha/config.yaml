@@ -1,0 +1,43 @@
+name: Bank2HA
+version: "1.0.0"
+slug: bank2ha
+description: Henter saldi og transaktioner fra Spar Nord/Nykredit via Enable Banking (PSD2, read-only) til en lokal database og Home Assistant
+url: https://github.com/jenshinnerup-lab/bank2ha
+arch:
+  - amd64
+  - aarch64
+init: false
+startup: application
+boot: auto
+ingress: true
+ingress_port: 8080
+panel_icon: mdi:bank
+panel_title: Bank
+map:
+  - addon_config:rw
+services:
+  - mqtt:want
+backup_exclude:
+  - "*.db-shm"
+options:
+  application_id: ""
+  private_key_file: eb_private_key.pem
+  bank_name: Spar Nord
+  bank_country: DK
+  consent_days: 180
+  sync_interval_minutes: 360
+  initial_history_days: 730
+  publish_transaction_details: true
+  large_transaction_threshold: 2000
+schema:
+  application_id: str
+  private_key_file: str
+  bank_name: str
+  bank_country: match(^[A-Z]{2}$)
+  consent_days: int(1,730)
+  sync_interval_minutes: int(60,1440)
+  initial_history_days: int(1,3650)
+  publish_transaction_details: bool
+  large_transaction_threshold: float
+  redirect_url: url?
+  database_url: password?

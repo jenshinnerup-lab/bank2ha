@@ -1,0 +1,67 @@
+# Eksempler på automationer. Ret entity_id'er til dine (Indstillinger → Enheder → "Bank <kontonavn>").
+
+- id: bank2ha_stor_transaktion
+  alias: "Bank: notifikation ved stor betaling"
+  triggers:
+    - trigger: state
+      entity_id: event.bank_budgetkonto_transaktion
+  conditions:
+    - condition: template
+      value_template: "{{ trigger.to_state.attributes.event_type == 'stor_transaktion' }}"
+  actions:
+    - action: notify.mobile_app_din_telefon
+      data:
+        title: "Stor betaling: {{ trigger.to_state.attributes.amount | round(2) }} kr."
+        message: >-
+          {{ trigger.to_state.attributes.counterparty or trigger.to_state.attributes.description }}
+          ({{ trigger.to_state.attributes.category }})
+
+- id: bank2ha_loen_modtaget
+  alias: "Bank: løn er gået ind"
+  triggers:
+    - trigger: state
+      entity_id: event.bank_budgetkonto_transaktion
+  conditions:
+    - condition: template
+      value_template: >-
+        {{ trigger.to_state.attributes.event_type == 'indbetaling'
+           and trigger.to_state.attributes.category == 'Løn' }}
+  actions:
+    - action: notify.mobile_app_din_telefon
+      data:
+        title: "Lønnen er gået ind 💰"
+        message: "{{ trigger.to_state.attributes.amount | round(2) }} kr."
+
+- id: bank2ha_samtykke_udloeber
+  alias: "Bank: forny MitID-samtykke"
+  triggers:
+    - trigger: state
+      entity_id: binary_sensor.bank2ha_samtykke_kraever_fornyelse
+      to: "on"
+    - trigger: time
+      at: "09:00:00"
+  conditions:
+    - condition: state
+      entity_id: binary_sensor.bank2ha_samtykke_kraever_fornyelse
+      state: "on"
+  actions:
+    - action: notify.mobile_app_din_telefon
+      data:
+        title: "Bank-adgang udløber"
+        message: >-
+          Samtykket til Spar Nord udløber om {{ states('sensor.bank2ha_samtykke_dage_tilbage') }} dage.
+          Åbn bank2ha og forny med MitID.
+
+- id: bank2ha_lav_saldo
+  alias: "Bank: lav saldo"
+  triggers:
+    - trigger: numeric_state
+      entity_id: sensor.bank_budgetkonto_saldo
+      below: 1000
+  actions:
+    - action: notify.mobile_app_din_telefon
+      data:
+        message: "Saldoen på budgetkontoen er under 1.000 kr. ({{ states('sensor.bank_budgetkonto_saldo') }} kr.)"
+
+# Idé: kobl el-pris/opladning og bank sammen – fx månedligt overblik over hvad elbilen
+# har kostet ved at sammenligne kategorien "Elbil-opladning" med din ladeboks' kWh.

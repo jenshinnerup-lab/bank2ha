@@ -1,0 +1,31 @@
+configuration:
+  application_id:
+    name: Enable Banking application ID
+    description: UUID'en fra enablebanking.com/cp/applications (samme som .pem-filnavnet)
+  private_key_file:
+    name: Privat nøgle (filnavn)
+    description: Filnavn i /addon_configs/<app>/ – fx eb_private_key.pem
+  bank_name:
+    name: Bank
+    description: Navn som i Enable Banking (Spar Nord eller Nykredit)
+  bank_country:
+    name: Land
+  consent_days:
+    name: Samtykke (dage)
+    description: Ønsket gyldighed – begrænses af bankens maksimum
+  sync_interval_minutes:
+    name: Sync-interval (minutter)
+    description: PSD2 tillader typisk 4 automatiske opslag pr. døgn – 360 er sikkert
+  initial_history_days:
+    name: Historik ved første sync (dage)
+  publish_transaction_details:
+    name: Send modpart og tekst til HA
+    description: Slå fra hvis HA's database kun må indeholde beløb og kategori
+  large_transaction_threshold:
+    name: Grænse for "stor transaktion" (kr.)
+  redirect_url:
+    name: Redirect URL
+    description: Skal matche din Enable Banking-application (standard http://localhost:8080/auth_redirect)
+  database_url:
+    name: Database-URL (valgfri)
+    description: Tom = SQLite i appens egen /data. Fx mysql+pymysql://bruger:pw@core-mariadb/bank2ha

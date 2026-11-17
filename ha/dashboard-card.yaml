@@ -1,0 +1,36 @@
+# Lovelace-kort (Rediger dashboard → Tilføj kort → Manuel)
+type: vertical-stack
+cards:
+  - type: entities
+    title: Økonomi
+    entities:
+      - entity: sensor.bank_budgetkonto_saldo
+        name: Saldo
+      - entity: sensor.bank_budgetkonto_forbrug_denne_maned
+        name: Forbrug denne måned
+      - entity: sensor.bank_budgetkonto_indtaegter_denne_maned
+        name: Indtægter denne måned
+      - entity: sensor.bank_budgetkonto_reserverede_posteringer
+        name: Reserveret
+      - entity: sensor.bank_budgetkonto_seneste_transaktion
+        name: Seneste
+        secondary_info: last-changed
+      - type: divider
+      - entity: sensor.bank2ha_samtykke_dage_tilbage
+      - entity: sensor.bank2ha_seneste_sync
+      - entity: button.bank2ha_synkroniser_nu
+  - type: markdown
+    title: Forbrug pr. kategori
+    content: >-
+      {% set cats = states.sensor.bank_budgetkonto_forbrug_denne_maned.attributes %}
+      | Kategori | Beløb |
+      |---|---:|
+      {% for k, v in cats.items() if v is number %}| {{ k }} | {{ '%.2f' | format(v) }} kr. |
+      {% endfor %}
+  - type: statistics-graph
+    title: Saldo-udvikling
+    entities:
+      - sensor.bank_budgetkonto_saldo
+    days_to_show: 90
+    stat_types: [mean]
+    chart_type: line

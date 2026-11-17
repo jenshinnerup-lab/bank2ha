@@ -1,0 +1,45 @@
+# Kategoriregler – regex matches mod modpart + posteringstekst (case-insensitive).
+# Første regel der matcher vinder. Filen genindlæses automatisk når den ændres.
+# direction: in (indbetalinger) | out (udbetalinger) | udelad = begge
+default_in: Indtægt
+default_out: Andet
+
+rules:
+  - category: Løn
+    direction: in
+    match: ["l[øo]n", "salary", "vibrantcolor"]
+
+  - category: Dagligvarer
+    direction: out
+    match: ["netto", "f[øo]tex", "bilka", "rema", "lidl", "meny", "spar ", "coop", "kvickly", "superbrugsen", "dagli.?brugsen", "aldi"]
+
+  - category: El & varme
+    direction: out
+    match: ["andel energi", "norlys", "ewii", "ørsted", "orsted", "fjernvarme", "energi"]
+
+  - category: Elbil-opladning
+    direction: out
+    match: ["clever", "monta", "e\\.on drive", "tesla supercharger", "ionity", "spirii"]
+
+  - category: Bil & transport
+    direction: out
+    match: ["q8", "circle k", "ok benzin", "shell", "ingo", "uno-x", "dsb", "rejsekort", "parkering", "easypark"]
+
+  - category: Forsikring
+    direction: out
+    match: ["tryg", "topdanmark", "alka", "codan", "gjensidige", "if skade", "lb forsikring"]
+
+  - category: Abonnementer
+    direction: out
+    match: ["netflix", "spotify", "viaplay", "tv ?2", "disney", "hbo", "max\\.com", "youtube", "apple\\.com", "google", "anthropic", "openai", "github"]
+
+  - category: Bolig
+    direction: out
+    match: ["husleje", "realkredit", "nykredit realkredit", "totalkredit", "boligafgift", "ejendomsskat"]
+
+  - category: Restaurant & café
+    direction: out
+    match: ["mcd", "burger", "pizza", "cafe", "café", "restaurant", "sunset", "starbucks", "just ?eat", "wolt"]
+
+  - category: Overførsel
+    match: ["overf[øo]rsel", "egen konto"]
