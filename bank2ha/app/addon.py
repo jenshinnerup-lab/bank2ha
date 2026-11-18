@@ -32,7 +32,11 @@ def _supervisor_mqtt() -> dict | None:
 def main() -> None:
     opts = json.loads(OPTIONS.read_text()) if OPTIONS.exists() else {}
     env = os.environ
-    env["EB_APPLICATION_ID"] = str(opts.get("application_id", ""))
+    app_id = str(opts.get("application_id", "") or "").strip()
+    id_file = CONFIG_DIR / "application_id"
+    if not app_id and id_file.exists():
+        app_id = id_file.read_text().strip()  # saved from the web UI
+    env["EB_APPLICATION_ID"] = app_id
     env["EB_PRIVATE_KEY_PATH"] = str(CONFIG_DIR / opts.get("private_key_file", "eb_private_key.pem"))
     env["EB_REDIRECT_URL"] = opts.get("redirect_url", "http://localhost:8080/auth_redirect")
     env["ASPSP_NAME"] = opts.get("bank_name", "Spar Nord")
@@ -55,9 +59,9 @@ def main() -> None:
     key = Path(env["EB_PRIVATE_KEY_PATH"])
     if not key.exists():
         print(f"[bank2ha] Mangler privat nøgle: læg din Enable Banking .pem-fil som {key} "
-              f"(på HA: /addon_configs/<app>/{key.name})", file=sys.stderr)
+              f"– eller indsæt den på Bank-siden i sidepanelet.", file=sys.stderr)
     if not env["EB_APPLICATION_ID"]:
-        print("[bank2ha] Udfyld 'application_id' under appens Konfiguration.", file=sys.stderr)
+        print("[bank2ha] Application ID mangler – indsæt det på Bank-siden eller under appens Konfiguration.", file=sys.stderr)
 
     mqtt = _supervisor_mqtt()
     if mqtt:

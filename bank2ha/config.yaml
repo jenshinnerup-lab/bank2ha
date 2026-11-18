@@ -1,5 +1,5 @@
 name: Bank2HA
-version: "1.0.0"
+version: "1.0.1"
 slug: bank2ha
 description: Henter saldi og transaktioner fra Spar Nord/Nykredit via Enable Banking (PSD2, read-only) til en lokal database og Home Assistant
 url: https://github.com/jenshinnerup-lab/bank2ha

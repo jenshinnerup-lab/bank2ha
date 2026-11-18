@@ -2,11 +2,13 @@
 from __future__ import annotations
 
 import html
+import os
 import logging
 import secrets
 import threading
 from contextlib import asynccontextmanager
 from datetime import date, timedelta
+from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 from fastapi import Depends, FastAPI, Form, HTTPException, Request, status
@@ -86,9 +88,57 @@ def auth(creds: HTTPBasicCredentials | None = Depends(security)) -> None:
 
 
 # ------------------------------------------------------------------ consent flow
+def _setup_problems() -> list[str]:
+    problems = []
+    if not settings.eb_application_id:
+        problems.append("Enable Banking application ID mangler")
+    if not Path(settings.eb_private_key_path).exists():
+        problems.append("Privat nøgle (.pem) mangler")
+    return problems
+
+
+def _error_page(msg: str, status_code: int = 400) -> HTMLResponse:
+    return HTMLResponse(_page(f"<div class=card><p class=err>{html.escape(msg)}</p><p><a href=./>Tilbage</a></p></div>"),
+                        status_code)
+
+
 @app.get("/connect", dependencies=[Depends(auth)])
 def connect():
-    return RedirectResponse(bank.start_consent(), status_code=303)
+    if _setup_problems():
+        return RedirectResponse("./", status_code=303)
+    try:
+        return RedirectResponse(bank.start_consent(), status_code=303)
+    except Exception as e:  # noqa: BLE001
+        log.exception("Kunne ikke starte samtykke")
+        return _error_page(f"Kunne ikke starte forbindelsen til banken: {e}")
+
+
+@app.post("/setup", dependencies=[Depends(auth)])
+def setup(application_id: str = Form(""), private_key: str = Form("")):
+    import uuid as _uuid
+    from cryptography.hazmat.primitives.serialization import load_pem_private_key
+
+    application_id = application_id.strip()
+    pem = private_key.strip().replace("\r\n", "\n")
+    key_path = Path(settings.eb_private_key_path)
+    try:
+        if application_id:
+            _uuid.UUID(application_id)
+            id_file = key_path.parent / "application_id"
+            id_file.write_text(application_id)
+            os.chmod(id_file, 0o600)
+            settings.eb_application_id = application_id
+        if pem:
+            load_pem_private_key(pem.encode(), password=None)
+            key_path.write_text(pem + "\n")
+            os.chmod(key_path, 0o600)
+    except ValueError as e:
+        return _error_page(f"Ugyldig værdi: {'application ID skal være et UUID' if 'UUID' in str(e) or 'hexadecimal' in str(e) else 'nøglen kunne ikke læses som en PEM privat nøgle'}")
+    except OSError as e:
+        return _error_page(f"Kunne ikke gemme: {e}")
+    bank.client._jwt = None  # force new token with new key/id
+    log.info("Opsætning gemt (application ID: %s, nøgle: %s)", bool(application_id), bool(pem))
+    return RedirectResponse("./?setup=1", status_code=303)
 
 
 def _finish(code: str | None, state: str | None, error: str | None = None):
@@ -181,10 +231,26 @@ def _fmt(v: float | None, cur: str = "DKK") -> str:
 
 
 @app.get("/", response_class=HTMLResponse, dependencies=[Depends(auth)])
-def index(request: Request, connected: int | None = None, sync: int | None = None):
+def index(request: Request, connected: int | None = None, sync: int | None = None, setup: int | None = None):
     s = bank.summary()
     e = html.escape
     parts = []
+    problems = _setup_problems()
+    if setup and not problems:
+        parts.append("<div class='card ok'>Opsætningen er gemt – du kan nu forbinde banken.</div>")
+    if problems:
+        missing = "".join(f"<li>{e(p)}</li>" for p in problems)
+        id_field = "" if settings.eb_application_id else (
+            "<p><label>Application ID<br><input type=text name=application_id "
+            "placeholder='xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx' style=width:100%></label></p>")
+        key_field = "" if Path(settings.eb_private_key_path).exists() else (
+            "<p><label>Privat nøgle – åbn .pem-filen i en teksteditor og indsæt hele indholdet<br>"
+            "<textarea name=private_key rows=8 style='width:100%;font-family:monospace' "
+            "placeholder='-----BEGIN PRIVATE KEY-----'></textarea></label></p>")
+        parts.append(f"""<div class=card><h3>Opsætning mangler</h3><ul class=err>{missing}</ul>
+<p class=muted>Begge dele får du på <a href=https://enablebanking.com/cp/applications target=_blank rel=noopener>enablebanking.com → Applications</a>.
+Nøglen gemmes kun i appens egen mappe med rettigheder 600.</p>
+<form method=post action=setup>{id_field}{key_field}<button>Gem</button></form></div>""")
     if connected:
         parts.append("<div class='card ok'>Banken er forbundet – første synkronisering kører nu (kan tage et minut).</div>")
     if sync:
@@ -203,7 +269,7 @@ def index(request: Request, connected: int | None = None, sync: int | None = Non
         cls = "ok" if s.get("last_sync_ok") else "err"
         sync_line = f"{e(s['last_sync'][:19].replace('T', ' '))} UTC – <span class={cls}>{e(s.get('last_sync_message') or '')}</span>"
     parts.append(f"""<div class=card><p><b>Samtykke:</b> {consent}</p><p><b>Seneste sync:</b> {sync_line}</p>
-<p><a class=btn href=connect target=_blank rel=noopener>{btn}</a> <form method=post action=sync style=display:inline><button>Synkronisér nu</button></form></p>
+<p>{'' if problems else f'<a class=btn href=connect target=_blank rel=noopener>{btn}</a>'} <form method=post action=sync style=display:inline><button>Synkronisér nu</button></form></p>
 <details open><summary class=muted>Efter MitID-login</summary>
 <p class=muted>Login åbner i en ny fane. Efter MitID sendes du til <code>{e(settings.eb_redirect_url)}</code> – siden kan ikke åbnes, det er forventet. Kopiér hele adressen fra adresselinjen og indsæt den her:</p>
 <form method=post action=paste><input type=text name=url placeholder="http://localhost:8080/auth_redirect?code=..."> <button>Fuldfør</button></form></details></div>""")

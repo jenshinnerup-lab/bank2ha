@@ -30,6 +30,12 @@ Bank2HA henter selv brugernavn og adgangskode til Mosquitto.
 
 ## 4. Læg nøglen på plads
 
+**Nemmest (fra version 1.0.1):** Start appen, åbn **Bank** i sidepanelet, og indsæt
+application ID og hele indholdet af `.pem`-filen i formularen *Opsætning mangler* → **Gem**.
+Så kan du springe trin 5.1 over.
+
+**Alternativt via Terminal:**
+
 Nøglen skal ligge i appens konfigurationsmappe `/addon_configs/<id>_bank2ha/`.
 Den nemmeste vej er **Terminal & SSH**:
 
